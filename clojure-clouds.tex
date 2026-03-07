@@ -154,7 +154,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Modular Distance: Tests}
+  \frametitle{Vector Modulus: Tests}
   \begin{minted}[]{clj}
 (facts "Wrap around components of vector to be within -size/2..size/2"
        (mod-vec {:size 8} (vec2 2 3)) => (vec2 2 3)
@@ -180,6 +180,34 @@
   (let [size2 (/ size 2)
         wrap  (fn [x] (-> x (+ size2) (mod size) (- size2)))]
     (apply vec-n (map wrap v))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Modular Distance: Tests}
+  \begin{minted}[]{clj}
+(tabular "Wrapped distance of two points"
+         (fact (mod-dist {:size 8} (vec2 ?ax ?ay) (vec2 ?bx ?by))
+               => ?result)
+         ?ax ?ay ?bx ?by ?result
+         0   0   0   0   0.0
+         0   0   2   0   2.0
+         0   0   5   0   3.0
+         0   0   0   2   2.0
+         0   0   0   5   3.0
+         2   0   0   0   2.0
+         5   0   0   0   3.0
+         0   2   0   0   2.0
+         0   5   0   0   3.0)
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Modular Distance: Implementation}
+  \begin{minted}[]{clj}
+(defn mod-dist
+  [params a b]
+  (mag (mod-vec params (sub b a))))
   \end{minted}
 \end{frame}
 
