@@ -99,13 +99,6 @@
   \end{minted}
 \end{frame}
 
-\begin{frame}
-  \frametitle{TDD:\@ Red, Green, Refactor}
-  \begin{center}
-    \movie[width=13cm,height=7.6cm,showcontrols]{\includegraphics[width=13cm]{clojure-clouds-tdd}}{clojure-clouds-tdd.mp4}
-  \end{center}
-\end{frame}
-
 \begin{frame}[fragile]
   \frametitle{Random Point in a Cell: Tests}
   \begin{minted}[]{clj}
@@ -232,6 +225,81 @@
     (apply tensor/select t (map mod args (dtype/shape t)))
     (apply t (map mod args (dtype/shape t)))))
   \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Division Index: Tests}
+  \begin{minted}[]{clj}
+(facts "Convert coordinate to division index"
+       (division-index {:cellsize 4} 3.5)  => 0
+       (division-index {:cellsize 4} 7.5)  => 1
+       (division-index {:cellsize 4} -0.5) => -1)
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Division Index: Implementation}
+  \begin{minted}[]{clj}
+(defn division-index
+  [{:keys [cellsize]} x]
+  (int (floor (/ x cellsize))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Neighbouring Indices}
+  \begin{center}
+    \movie[width=13cm,height=7.6cm,showcontrols]{\includegraphics[width=13cm]{clojure-clouds-tdd}}{clojure-clouds-tdd.mp4}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Worley Noise}
+  \begin{minted}[]{clj}
+(defn worley-noise
+  [{:keys [size dimensions] :as params}]
+  (let [random-points (random-points params)]
+    (tensor/clone
+      (tensor/compute-tensor
+        (repeat dimensions size)
+        (fn [& coords]
+            (let [center   (map #(+ % 0.5) coords)
+                  division (map (partial division-index params) center)]
+              (apply min
+                     (for [neighbour (apply neighbours division)]
+                          (mod-dist params (apply vec-n (reverse center))
+                                    (apply wrap-get
+                                           random-points
+                                           neighbour))))))
+        :double))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Normalised Worley Noise}
+  \begin{minted}[]{clj}
+(def worley (worley-noise (make-noise-params 256 8 2)))
+
+(def worley-norm
+  (dfn/* (/ 255 (- (dfn/reduce-max worley) (dfn/reduce-min worley)))
+         (dfn/- (dfn/reduce-max worley) worley)))
+
+worley-norm
+; [[212,6 219,5 226,1 ... 191,0 198,3 205,5]
+;  [214,6 221,9 229,2 ... 192,4 199,8 207,2]
+;  [215,3 222,8 230,3 ... 192,8 200,3 207,8]
+;  ...
+;  [200,5 205,7 210,2 ... 182,4 188,7 194,8]
+;  [205,3 211,0 216,2 ... 186,0 192,7 199,1]
+;  [209,4 215,7 221,6 ... 188,9 195,9 202,7]]
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Worley Noise Image}
+  \begin{center}
+    \includegraphics[width=.5\textwidth]{worley-noise}
+  \end{center}
 \end{frame}
 
 % ---
