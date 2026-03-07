@@ -86,7 +86,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Noise Volume Parameters}
+  \frametitle{Generic Vector Constructor}
   \begin{minted}[]{clj}
 (defn vec-n
   ([x y] (vec2 x y))
@@ -102,7 +102,7 @@
 \begin{frame}
   \frametitle{TDD:\@ Red, Green, Refactor}
   \begin{center}
-    \movie[width=13cm,height=7.6cm,showcontrols]{\includegraphics[width=13cm]{clojure-clouds-tdd.jpg}}{clojure-clouds-tdd.mp4}
+    \movie[width=13cm,height=7.6cm,showcontrols]{\includegraphics[width=13cm]{clojure-clouds-tdd}}{clojure-clouds-tdd.mp4}
   \end{center}
 \end{frame}
 
@@ -132,26 +132,54 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Random Points Tensor: Tests}
-  \begin{minted}[]{clj}
-(facts "Place random point in a cell"
-       (with-redefs [rand (fn [s] (* 0.5 s))]
-         (random-point-in-cell {:cellsize 1} 0 0) => (vec2 0.5 0.5)
-         (random-point-in-cell {:cellsize 2} 0 0) => (vec2 1.0 1.0)
-         (random-point-in-cell {:cellsize 2} 0 3) => (vec2 7.0 1.0)
-         (random-point-in-cell {:cellsize 2} 2 0) => (vec2 1.0 5.0)
-         (random-point-in-cell {:cellsize 2} 2 3 5) => (vec3 11.0 7.0 5.0)))
-  \end{minted}
-\end{frame}
-
-\begin{frame}[fragile]
-  \frametitle{Random Points Tensor: Implementation}
+  \frametitle{Random Points Tensor}
   \begin{minted}[]{clj}
 (defn random-points
   [{:keys [divisions dimensions] :as params}]
   (tensor/clone
     (tensor/compute-tensor (repeat dimensions divisions)
                            (partial random-point-in-cell params))))
+
+(random-points (make-noise-params 256 2 2))
+; [[#vec2 [37.700.., 62.623..]  #vec2 [192.561.., 124.336..]]
+;  [#vec2 [9.337.., 179.129..] #vec2 [162.857.., 245.440..]]]
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Random Points}
+  \begin{center}
+    \includegraphics[width=.6\textwidth]{random-points}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Modular Distance: Tests}
+  \begin{minted}[]{clj}
+(facts "Wrap around components of vector to be within -size/2..size/2"
+       (mod-vec {:size 8} (vec2 2 3)) => (vec2 2 3)
+       (mod-vec {:size 8} (vec2 5 2)) => (vec2 -3 2)
+       (mod-vec {:size 8} (vec2 2 5)) => (vec2 2 -3)
+       (mod-vec {:size 8} (vec2 -5 2)) => (vec2 3 2)
+       (mod-vec {:size 8} (vec2 2 -5)) => (vec2 2 3)
+       (mod-vec {:size 8} (vec3 2 3 1)) => (vec3 2 3 1)
+       (mod-vec {:size 8} (vec3 5 2 1)) => (vec3 -3 2 1)
+       (mod-vec {:size 8} (vec3 2 5 1)) => (vec3 2 -3 1)
+       (mod-vec {:size 8} (vec3 2 3 5)) => (vec3 2 3 -3)
+       (mod-vec {:size 8} (vec3 -5 2 1)) => (vec3 3 2 1)
+       (mod-vec {:size 8} (vec3 2 -5 1)) => (vec3 2 3 1)
+       (mod-vec {:size 8} (vec3 2 3 -5)) => (vec3 2 3 3))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Vector Modulus: Implementation}
+  \begin{minted}[]{clj}
+(defn mod-vec
+  [{:keys [size]} v]
+  (let [size2 (/ size 2)
+        wrap  (fn [x] (-> x (+ size2) (mod size) (- size2)))]
+    (apply vec-n (map wrap v))))
   \end{minted}
 \end{frame}
 
