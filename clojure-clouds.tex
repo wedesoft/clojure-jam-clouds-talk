@@ -70,15 +70,6 @@
   \end{center}
 \end{frame}
 
-\begin{frame}
-  \frametitle{OpenGL Superbible}
-  \begin{center}
-    \includegraphics[width=.8\textwidth]{superbible}
-  \end{center}
-\end{frame}
-
-% See https://clojurecivitas.org/volumetric_clouds/main.html
-
 \begin{frame}[fragile]
   \frametitle{Noise Volume Parameters}
   \begin{minted}[]{clj}
@@ -108,6 +99,13 @@
   \end{minted}
 \end{frame}
 
+\begin{frame}
+  \frametitle{TDD:\@ Red, Green, Refactor}
+  \begin{center}
+    \movie[width=13cm,height=7.6cm,showcontrols]{\includegraphics[width=13cm]{clojure-clouds-tdd.jpg}}{clojure-clouds-tdd.mp4}
+  \end{center}
+\end{frame}
+
 \begin{frame}[fragile]
   \frametitle{Random Point in a Cell: Tests}
   \begin{minted}[]{clj}
@@ -133,11 +131,39 @@
   \end{minted}
 \end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Random Points Tensor: Tests}
+  \begin{minted}[]{clj}
+(facts "Place random point in a cell"
+       (with-redefs [rand (fn [s] (* 0.5 s))]
+         (random-point-in-cell {:cellsize 1} 0 0) => (vec2 0.5 0.5)
+         (random-point-in-cell {:cellsize 2} 0 0) => (vec2 1.0 1.0)
+         (random-point-in-cell {:cellsize 2} 0 3) => (vec2 7.0 1.0)
+         (random-point-in-cell {:cellsize 2} 2 0) => (vec2 1.0 5.0)
+         (random-point-in-cell {:cellsize 2} 2 3 5) => (vec3 11.0 7.0 5.0)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Random Points Tensor: Implementation}
+  \begin{minted}[]{clj}
+(defn random-points
+  [{:keys [divisions dimensions] :as params}]
+  (tensor/clone
+    (tensor/compute-tensor (repeat dimensions divisions)
+                           (partial random-point-in-cell params))))
+  \end{minted}
+\end{frame}
+
+% ---
+
 \begin{frame}
-  \frametitle{TDD:\@ Red, Green, Refactor}
+  \frametitle{OpenGL Superbible}
   \begin{center}
-    \movie[width=13cm,height=7.6cm,showcontrols]{\includegraphics[width=13cm]{clojure-clouds-tdd.jpg}}{clojure-clouds-tdd.mp4}
+    \includegraphics[width=.8\textwidth]{superbible}
   \end{center}
 \end{frame}
+
+% See https://clojurecivitas.org/volumetric_clouds/main.html
 
 \end{document}
