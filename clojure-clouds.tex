@@ -365,7 +365,9 @@ worley-norm
 (defn random-gradient
 [& args]
 (loop [args args]
-      (let [random-vector (apply vec-n (map (fn [_x] (- (rand 2.0) 1.0)) args))
+      (let [random-vector (apply vec-n
+                                 (map (fn [_x] (- (rand 2.0) 1.0))
+                                      args))
             vector-length (mag random-vector)]
         (if (and (> vector-length 0.0) (<= vector-length 1.0))
           (div random-vector vector-length)
@@ -377,8 +379,11 @@ worley-norm
   \frametitle{Random Gradient Field}
   \begin{minted}[]{clj}
 (defn random-gradients
- [{:keys [divisions dimensions]}]
- (tensor/clone (tensor/compute-tensor (repeat dimensions divisions) random-gradient)))
+  [{:keys [divisions dimensions]}]
+  (tensor/clone
+    (tensor/compute-tensor
+      (repeat dimensions divisions)
+      random-gradient)))
   \end{minted}
 \end{frame}
 
@@ -387,6 +392,106 @@ worley-norm
   \begin{center}
     \includegraphics[width=.6\textwidth]{random-gradients}
   \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Fraction of Float: Tests}
+  \begin{minted}[]{clj}
+(facts "Fractional part of floating point number"
+       (frac 0.25) => 0.25
+       (frac 1.75) => 0.75
+       (frac -0.25) => 0.75)
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Fraction of Float: Implementation}
+  \begin{minted}[]{clj}
+(defn frac
+  [x]
+  (- x (Math/floor x)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Relative Cell Position: Tests}
+  \begin{minted}[]{clj}
+(facts "Relative position of point in a cell"
+       (cell-pos {:cellsize 4} (vec2 2 3)) => (vec2 0.5 0.75)
+       (cell-pos {:cellsize 4} (vec2 7 5)) => (vec2 0.75 0.25)
+       (cell-pos {:cellsize 4} (vec3 7 5 2)) => (vec3 0.75 0.25 0.5))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Relative Cell Position: Implementation}
+  \begin{minted}[]{clj}
+(defn cell-pos
+  [{:keys [cellsize]} point]
+  (apply vec-n (map frac (div point cellsize))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{2$\times$2 Tensor of Corner Vectors: Tests}
+  \begin{minted}[]{clj}
+(facts "Compute relative vectors from cell corners to point in cell"
+       (let [params   {:cellsize 4 :dimensions 2}
+             corners2 (corner-vectors params (vec2 7 6))
+             corners3 (corner-vectors params (vec3 7 6 5))]
+         (corners2 0 0) => (vec2 0.75 0.5)
+         (corners2 0 1) => (vec2 -0.25 0.5)
+         (corners2 1 0) => (vec2 0.75 -0.5)
+         (corners2 1 1) => (vec2 -0.25 -0.5)
+         (corners3 0 0 0) => (vec3 0.75 0.5 0.25)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{2$\times$2 Tensor of Corner Vectors: Implementation}
+  \begin{minted}[]{clj}
+(defn corner-vectors
+  [{:keys [dimensions] :as params} point]
+  (let [cell-pos (cell-pos params point)]
+    (tensor/compute-tensor
+      (repeat dimensions 2)
+      (fn [& args] (sub cell-pos (apply vec-n (reverse args)))))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{2$\times$2 Tensor of Gradients: Tests}
+  \begin{minted}[]{clj}
+(facts "Get 2x2 tensor of gradients from a larger tensor using wrap around"
+       (let [params     {:cellsize 4 :dimensions 2}
+             gradients2 (tensor/compute-tensor [4 6]
+                                               (fn [y x] (vec2 x y)))
+             gradients3 (tensor/compute-tensor [4 6 8]
+                                               (fn [z y x] (vec3 x y z)))]
+         ((corner-gradients params gradients2 (vec2 9 6)) 0 0)
+         => (vec2 2 1)
+         ((corner-gradients params gradients2 (vec2 9 6)) 0 1)
+         => (vec2 3 1)
+         ((corner-gradients params gradients2 (vec2 9 6)) 1 0)
+         => (vec2 2 2)
+         ((corner-gradients params gradients2 (vec2 23 15)) 1 1)
+         => (vec2 0 0)
+         ((corner-gradients params gradients3 (vec3 9 6 3)) 0 0 0)
+         => (vec3 2 1 0)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{2$\times$2 Tensor of Gradients: Implementation}
+  \begin{minted}[]{clj}
+(defn corner-gradients
+  [{:keys [dimensions] :as params} gradients point]
+  (let [division (map (partial division-index params) point)]
+    (tensor/compute-tensor
+      (repeat dimensions 2)
+      (fn [& coords] (apply wrap-get gradients
+                            (map + (reverse division) coords))))))
+  \end{minted}
 \end{frame}
 
 % ---
