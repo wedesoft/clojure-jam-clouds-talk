@@ -247,18 +247,13 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Division Index: Tests}
+  \frametitle{Division Index}
   \begin{minted}[]{clj}
 (facts "Convert coordinate to division index"
        (division-index {:cellsize 4} 3.5)  => 0
        (division-index {:cellsize 4} 7.5)  => 1
        (division-index {:cellsize 4} -0.5) => -1)
-  \end{minted}
-\end{frame}
 
-\begin{frame}[fragile]
-  \frametitle{Division Index: Implementation}
-  \begin{minted}[]{clj}
 (defn division-index
   [{:keys [cellsize]} x]
   (int (floor (/ x cellsize))))
@@ -395,18 +390,13 @@ worley-norm
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Fraction of Float: Tests}
+  \frametitle{Fraction of Float}
   \begin{minted}[]{clj}
 (facts "Fractional part of floating point number"
        (frac 0.25) => 0.25
        (frac 1.75) => 0.75
        (frac -0.25) => 0.75)
-  \end{minted}
-\end{frame}
 
-\begin{frame}[fragile]
-  \frametitle{Fraction of Float: Implementation}
-  \begin{minted}[]{clj}
 (defn frac
   [x]
   (- x (Math/floor x)))
@@ -414,18 +404,13 @@ worley-norm
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Relative Cell Position: Tests}
+  \frametitle{Relative Cell Position}
   \begin{minted}[]{clj}
 (facts "Relative position of point in a cell"
        (cell-pos {:cellsize 4} (vec2 2 3)) => (vec2 0.5 0.75)
        (cell-pos {:cellsize 4} (vec2 7 5)) => (vec2 0.75 0.25)
        (cell-pos {:cellsize 4} (vec3 7 5 2)) => (vec3 0.75 0.25 0.5))
-  \end{minted}
-\end{frame}
 
-\begin{frame}[fragile]
-  \frametitle{Relative Cell Position: Implementation}
-  \begin{minted}[]{clj}
 (defn cell-pos
   [{:keys [cellsize]} point]
   (apply vec-n (map frac (div point cellsize))))
@@ -491,6 +476,38 @@ worley-norm
       (repeat dimensions 2)
       (fn [& coords] (apply wrap-get gradients
                             (map + (reverse division) coords))))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{2$\times$2 Tensor of Influence Values: Tests}
+  \begin{minted}[]{clj}
+(facts "Compute influence values from corner vectors and gradients"
+  (let [gradients2 (tensor/compute-tensor [2 2] (fn [_y x] (vec2 x 10)))
+        vectors2   (tensor/compute-tensor [2 2] (fn [y _x] (vec2 1 y)))
+        influence2 (influence-values gradients2 vectors2)
+        gradients3 (tensor/compute-tensor [2 2 2]
+                                          (fn [z y x] (vec3 x y z)))
+        vectors3   (tensor/compute-tensor [2 2 2]
+                                          (fn [_z _y _x] (vec3 1 10 100)))
+        influence3 (influence-values gradients3 vectors3)]
+    (influence2 0 0) => 0.0
+    (influence2 0 1) => 1.0
+    (influence2 1 0) => 10.0
+    (influence2 1 1) => 11.0
+    (influence3 1 1 1) => 111.0))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{2$\times$2 Tensor of Influence Values: Implementation}
+  \begin{minted}[]{clj}
+(defn influence-values
+  [gradients vectors]
+  (tensor/compute-tensor
+    (repeat (count (dtype/shape gradients)) 2)
+    (fn [& args] (dot (apply gradients args) (apply vectors args)))
+    :double))
   \end{minted}
 \end{frame}
 
