@@ -299,6 +299,7 @@
          (dfn/- (dfn/reduce-max worley) worley)))
 
 worley-norm
+; #tech.v3.tensor<float64>[256 256]
 ; [[212,6 219,5 226,1 ... 191,0 198,3 205,5]
 ;  [214,6 221,9 229,2 ... 192,4 199,8 207,2]
 ;  [215,3 222,8 230,3 ... 192,8 200,3 207,8]
@@ -511,6 +512,117 @@ worley-norm
   \end{minted}
 \end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Ease Curve}
+  \begin{minted}[]{clj}
+(facts "Monotonous function with zero derivative at zero and one"
+       (ease-curve 0.0) => 0.0
+       (ease-curve 0.25) => (roughly 0.103516 1e-6)
+       (ease-curve 0.5) => 0.5
+       (ease-curve 0.75) => (roughly 0.896484 1e-6)
+       (ease-curve 1.0) => 1.0)
+
+(defn ease-curve
+  [t]
+  (-> t (* 6.0) (- 15.0) (* t) (+ 10.0) (* t t t)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Ease Curve}
+  \begin{center}
+    \includegraphics[width=.6\textwidth]{ease-curve}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Interpolation Weights: Tests}
+  \begin{minted}[]{clj}
+(facts "Interpolation weights"
+       (let [weights2 (interpolation-weights {:cellsize 8} (vec2 2 7))
+             weights3 (interpolation-weights {:cellsize 8} (vec3 2 7 3))]
+         (weights2 0 0) => (roughly 0.014391 1e-6)
+         (weights2 0 1) => (roughly 0.001662 1e-6)
+         (weights2 1 0) => (roughly 0.882094 1e-6)
+         (weights2 1 1) => (roughly 0.101854 1e-6)
+         (weights3 0 0 0) => (roughly 0.010430 1e-6)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Interpolation Weights: Implementation}
+  \begin{minted}[]{clj}
+(defn interpolation-weights
+  ([params point]
+   (interpolation-weights (cell-pos params point)))
+  ([pos]
+   (if (seq pos)
+     (let [w1   (- 1.0 (last pos))
+           w2   (last pos)
+           elem (interpolation-weights (butlast pos))]
+       (tensor/->tensor [(dfn/* (ease-curve w1) elem)
+                         (dfn/* (ease-curve w2) elem)]))
+     1.0)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Sample Perlin Noise}
+  \begin{minted}[]{clj}
+(defn perlin-sample
+  [params gradients point]
+  (let [gradients (corner-gradients params gradients point)
+        vectors   (corner-vectors params point)
+        influence (influence-values gradients vectors)
+        weights   (interpolation-weights params point)]
+    (dfn/reduce-+ (dfn/* weights influence))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Perlin Noise}
+  \begin{minted}[]{clj}
+(defn perlin-noise
+  [{:keys [size dimensions] :as params}]
+  (let [gradients (random-gradients params)]
+    (tensor/clone
+      (tensor/compute-tensor
+        (repeat dimensions size)
+        (fn [& args]
+            (let [center (apply vec-n (map #(+ % 0.5) (reverse args)))]
+              (perlin-sample params gradients center)))
+        :double))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Normalised Perlin Noise}
+  \begin{minted}[]{clj}
+(def perlin (perlin-noise (make-noise-params 256 8 2)))
+
+(def perlin-norm
+  (dfn/* (/ 255 (- (dfn/reduce-max perlin) (dfn/reduce-min perlin)))
+         (dfn/- perlin (dfn/reduce-min perlin))))
+
+perlin-norm
+; #tech.v3.tensor<float64>[256 256]
+; [[122,3 115,8 108,9 ... 140,7 134,8 128,6]
+;  [119,5 113,1 106,2 ... 137,9 132,0 125,8]
+;  [116,5 110,1 103,3 ... 134,8 128,9 122,8]
+;  ...
+;  [130,9 124,5 117,6 ... 149,4 143,4 137,2]
+;  [127,8 121,3 114,4 ... 146,2 140,3 134,1]
+;  [125,0 118,5 111,6 ... 143,4 137,5 131,3]]
+  \end{minted}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Perlin Noise Result}
+  \begin{center}
+    \includegraphics[width=.5\textwidth]{perlin-noise}
+  \end{center}
+\end{frame}
+
 % ---
 
 \begin{frame}
@@ -520,6 +632,7 @@ worley-norm
   \end{center}
 \end{frame}
 
+% Refer to post for detailed OpenGL bindings
 % See https://clojurecivitas.org/volumetric_clouds/main.html
 
 \end{document}
