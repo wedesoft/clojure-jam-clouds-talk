@@ -100,6 +100,24 @@
 \end{frame}
 
 \begin{frame}[fragile]
+  \frametitle{Worley Noise}
+  \begin{center}
+    \includegraphics[width=.5\textwidth]{worley-noise}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Worley Noise}
+  \begin{center}
+    \begin{itemize}
+      \item Divide space into cell
+      \item Place random point in each cell
+      \item distance to closest point is Worley noise function
+    \end{itemize}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
   \frametitle{Random Point in a Cell: Tests}
   \begin{minted}[]{clj}
 (facts "Place random point in a cell"
@@ -296,9 +314,60 @@ worley-norm
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Worley Noise Image}
+  \frametitle{Worley Noise Result}
   \begin{center}
     \includegraphics[width=.5\textwidth]{worley-noise}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Perlin Noise}
+  \begin{center}
+    \includegraphics[width=.5\textwidth]{perlin-noise}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Random Gradient: Tests}
+  \begin{minted}[]{clj}
+(defn roughly-vec
+  [expected error]
+  (fn [actual]
+      (<= (mag (sub actual expected)) error)))
+
+(facts "Create unit vector with random direction"
+   (with-redefs [rand (constantly 0.5)]
+     (random-gradient 0 0)
+     => (roughly-vec (vec2 (- (sqrt 0.5)) (- (sqrt 0.5))) 1e-6))
+   (with-redefs [rand (constantly 1.5)]
+     (random-gradient 0 0)
+     => (roughly-vec (vec2 (sqrt 0.5) (sqrt 0.5)) 1e-6)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Random Gradient: Implementation}
+  \begin{minted}[]{clj}
+(defn random-gradient
+[& args]
+(loop [args args]
+      (let [random-vector (apply vec-n (map (fn [_x] (- (rand 2.0) 1.0)) args))
+            vector-length (mag random-vector)]
+        (if (and (> vector-length 0.0) (<= vector-length 1.0))
+          (div random-vector vector-length)
+          (recur args)))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Perlin Noise}
+  \begin{center}
+    \begin{itemize}
+      \item Divide space into cell
+      \item Assign a random gradient vector to each cell corner
+      \item Compute dot product of distance vector and gradient vector
+      \item Interpolate the dot product values to generate Perlin noise
+    \end{itemize}
   \end{center}
 \end{frame}
 
