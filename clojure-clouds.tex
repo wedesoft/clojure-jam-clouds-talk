@@ -99,16 +99,17 @@
   \end{minted}
 \end{frame}
 
-\begin{frame}[fragile]
+\begin{frame}
   \frametitle{Worley Noise}
   \begin{center}
     \includegraphics[width=.5\textwidth]{worley-noise}
   \end{center}
 \end{frame}
 
-\begin{frame}[fragile]
+\begin{frame}
   \frametitle{Worley Noise}
   \begin{center}
+    Worley noise / Voronoi noise
     \begin{itemize}
       \item Divide space into cell
       \item Place random point in each cell
@@ -157,7 +158,7 @@
   \end{minted}
 \end{frame}
 
-\begin{frame}[fragile]
+\begin{frame}
   \frametitle{Random Points}
   \begin{center}
     \includegraphics[width=.6\textwidth]{random-points}
@@ -313,7 +314,7 @@ worley-norm
   \end{minted}
 \end{frame}
 
-\begin{frame}[fragile]
+\begin{frame}
   \frametitle{Worley Noise Result}
   \begin{center}
     \includegraphics[width=.5\textwidth]{worley-noise}
@@ -324,6 +325,19 @@ worley-norm
   \frametitle{Perlin Noise}
   \begin{center}
     \includegraphics[width=.5\textwidth]{perlin-noise}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Perlin Noise}
+  \begin{center}
+    Perlin noise / Gradient noise
+    \begin{itemize}
+      \item Divide space into cell
+      \item Assign a random gradient vector to each cell corner
+      \item Compute dot product of distance vector and gradient vector
+      \item Interpolate the dot product values to generate Perlin noise
+    \end{itemize}
   \end{center}
 \end{frame}
 
@@ -360,14 +374,18 @@ worley-norm
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Perlin Noise}
+  \frametitle{Random Gradient Field}
+  \begin{minted}[]{clj}
+(defn random-gradients
+ [{:keys [divisions dimensions]}]
+ (tensor/clone (tensor/compute-tensor (repeat dimensions divisions) random-gradient)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Random Gradients}
   \begin{center}
-    \begin{itemize}
-      \item Divide space into cell
-      \item Assign a random gradient vector to each cell corner
-      \item Compute dot product of distance vector and gradient vector
-      \item Interpolate the dot product values to generate Perlin noise
-    \end{itemize}
+    \includegraphics[width=.6\textwidth]{random-gradients}
   \end{center}
 \end{frame}
 
