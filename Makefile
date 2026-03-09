@@ -11,7 +11,7 @@ clojure-clouds.pdf: clojure-clouds.tex $(IMAGES)
 	pdflatex -shell-escape $<
 
 clean:
-	rm -Rf clojure-clouds.pdf _minted-clojure-clouds *.aux *.log *.out *.nav *.snm *.toc *.vrb
+	rm -Rf clojure-clouds.pdf _minted* *.aux *.log *.out *.nav *.snm *.toc *.vrb
 
 .svg.png:
 	rsvg-convert -f png -h 1080 $< -o $@
