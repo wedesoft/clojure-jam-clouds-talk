@@ -652,14 +652,112 @@ perlin-norm
   \end{minted}
 \end{frame}
 
-% ---
-
 \begin{frame}
   \frametitle{OpenGL Superbible}
   \begin{center}
     \includegraphics[width=.8\textwidth]{superbible}
   \end{center}
 \end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Initialise OpenGL}
+  \begin{minted}[]{clj}
+(GLFW/glfwInit)
+(def window-width 640)
+(def window-height 480)
+(GLFW/glfwDefaultWindowHints)
+(GLFW/glfwWindowHint GLFW/GLFW_VISIBLE GLFW/GLFW_FALSE)
+(def window (GLFW/glfwCreateWindow window-width window-height
+                                   "Invisible Window" 0 0))
+(GLFW/glfwMakeContextCurrent window)
+(GL/createCapabilities)
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Offscreen Rendering}
+  \begin{minted}[]{clj}
+(defmacro render-array
+  [width height & body]
+  `(let [texture# (make-texture-2d ~width ~height)]
+     (try
+       (framebuffer-render texture# ~width ~height ~@body)
+       (read-texture-2d texture# ~width ~height)
+       (finally
+         (GL11/glDeleteTextures texture#)))))
+  \end{minted}
+  \bigskip
+  \begin{footnotesize}
+    Complete source code at\ \url{https://clojurecivitas.org/volumetric_clouds/main.html}
+  \end{footnotesize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Vertex and Fragment Shader}
+  \begin{minted}[]{clj}
+(def vertex-passthrough
+"#version 130
+in vec3 point;
+void main()
+{
+  gl_Position = vec4(point, 1);
+}")
+
+(def fragment-test
+"#version 130
+out vec4 fragColor;
+void main()
+{
+  fragColor = vec4(1, 1, 1, 1);
+}")
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Single Quad Vertex Array Object (VAO)}
+  \begin{minted}[]{clj}
+(defn setup-quad-vao
+  []
+  (let [vertices (float-array [ 1.0  1.0 0.0,
+                               -1.0  1.0 0.0,
+                                1.0 -1.0 0.0,
+                               -1.0 -1.0 0.0])
+        indices  (int-array [0 1 3 2])]
+    (setup-vao vertices indices)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Vertex Attribute Memory Layout}
+  \begin{minted}[]{clj}
+(defn setup-point-attribute
+  [program]
+  (let [point-attribute (GL20/glGetAttribLocation program "point")]
+    (GL20/glVertexAttribPointer point-attribute 3 GL11/GL_FLOAT false
+                                (* 3 Float/BYTES) (* 0 Float/BYTES))
+    (GL20/glEnableVertexAttribArray point-attribute)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Render a Test Pixel}
+  \begin{minted}[]{clj}
+(defn render-pixel
+  [vertex-sources fragment-sources]
+  (let [program (make-program-with-shaders vertex-sources fragment-sources)
+        vao     (setup-quad-vao)]
+    (setup-point-attribute program)
+    (try
+      (render-array 1 1
+                    (GL20/glUseProgram program)
+                    (GL11/glDrawElements GL11/GL_QUADS 4
+                                         GL11/GL_UNSIGNED_INT 0))
+      (finally
+        (teardown-vao vao)
+        (GL20/glDeleteProgram program)))))
+  \end{minted}
+\end{frame}
+
 
 % Refer to post for detailed OpenGL bindings
 % See https://clojurecivitas.org/volumetric_clouds/main.html
