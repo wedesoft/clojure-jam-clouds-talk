@@ -623,6 +623,35 @@ perlin-norm
   \end{center}
 \end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Mixing Worley and Perlin Noise}
+  \begin{minted}[]{clj}
+(def perlin-worley-norm
+  (dfn/+ (dfn/* 0.3 perlin-norm) (dfn/* 0.7 worley-norm)))
+  \end{minted}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Mixing Worley and Perlin Noise}
+  \begin{center}
+    \includegraphics[width=.5\textwidth]{mixed-noise}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Octaves}
+  \begin{minted}[]{clj}
+(defn octaves
+  [n decay]
+  (let [series (take n (iterate #(* % decay) 1.0))
+        sum    (apply + series)]
+    (mapv #(/ % sum) series)))
+
+(octaves 4 0.5)
+; [0.5333.. 0.2666.. 0.1333.. 0.0666..]
+  \end{minted}
+\end{frame}
+
 % ---
 
 \begin{frame}
