@@ -767,7 +767,7 @@ float noise(vec3 idx)
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Noise Mock Test Fragment Shader}
+  \frametitle{Noise Mock Probing Shader}
   \begin{minted}[]{clj}
 (def noise-probe
   (template/fn [x y z]
@@ -817,7 +817,7 @@ void main()
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Octaves of Noise: Test Shader}
+  \frametitle{Octaves of Noise: Probing Shader}
   \begin{minted}[]{clj}
 (def octaves-probe
   (template/fn [x y z]
@@ -869,7 +869,68 @@ float octaves(vec3 idx)
   \end{minted}
 \end{frame}
 
-% Refer to post for detailed OpenGL bindings
-% See https://clojurecivitas.org/volumetric_clouds/main.html
+\begin{frame}[fragile]
+  \frametitle{Ray-Box-Intersection: Probing Shader}
+  \begin{minted}[]{clj}
+(def ray-box-probe
+  (template/fn [ox oy oz dx dy dz]
+"#version 130
+out vec4 fragColor;
+vec2 ray_box(vec3 box_min, vec3 box_max, vec3 origin, vec3 direction);
+void main()
+{
+  vec3 box_min = vec3(-1, -1, -1);
+  vec3 box_max = vec3(1, 1, 1);
+  vec3 origin = vec3(<%= ox %>, <%= oy %>, <%= oz %>);
+  vec3 direction = vec3(<%= dx %>, <%= dy %>, <%= dz %>);
+  fragColor = vec4(ray_box(box_min, box_max, origin, direction), 0, 0);
+}"))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Ray-Box-Intersection: Tests}
+  \begin{minted}[]{clj}
+(tabular "Test intersection of ray with box"
+   (fact ((juxt first second)
+          (render-pixel [vertex-passthrough]
+                        [ray-box (ray-box-probe ?ox ?oy ?oz ?dx ?dy ?dz)]))
+         => ?result)
+   ?ox ?oy ?oz ?dx ?dy ?dz ?result
+   -2   0   0   1   0   0  [1.0 3.0]
+   -2   0   0   2   0   0  [0.5 1.5]
+   -2   2   2   1   0   0  [0.0 0.0]
+    0  -2   0   0   1   0  [1.0 3.0]
+    0  -2   0   0   2   0  [0.5 1.5]
+    2  -2   2   0   1   0  [0.0 0.0]
+    0   0  -2   0   0   1  [1.0 3.0]
+    0   0  -2   0   0   2  [0.5 1.5]
+    2   2  -2   0   0   1  [0.0 0.0]
+    0   0   0   1   0   0  [0.0 1.0]
+    2   0   0   1   0   0  [0.0 0.0])
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Ray-Box-Intersection: Implementation}
+  \begin{minted}[]{clj}
+(def ray-box
+"#version 130
+vec2 ray_box(vec3 box_min, vec3 box_max, vec3 origin, vec3 direction)
+{
+  vec3 inv_dir = 1.0 / direction;
+  vec3 smin = (box_min - origin) * inv_dir;
+  vec3 smax = (box_max - origin) * inv_dir;
+  vec3 s1 = min(smin, smax);
+  vec3 s2 = max(smin, smax);
+  float s_near = max(max(s1.x, s1.y), s1.z);
+  float s_far = min(min(s2.x, s2.y), s2.z);
+  if (isinf(s_near) || isinf(s_far))
+    return vec2(0.0, 0.0);
+  else
+    return vec2(max(s_near, 0.0), max(0.0, s_far));
+}")
+  \end{minted}
+\end{frame}
 
 \end{document}
