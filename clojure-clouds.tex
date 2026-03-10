@@ -136,10 +136,9 @@
   \begin{minted}[]{clj}
 (defn random-point-in-cell
   [{:keys [cellsize]} & indices]
-  (let [random-seq (repeatedly #(rand cellsize))
-        dimensions (count indices)]
+  (let [random-seq (for [_i indices] (rand cellsize))]
     (add (mult (apply vec-n (reverse indices)) cellsize)
-         (apply vec-n (take dimensions random-seq)))))
+         (apply vec-n random-seq))))
   \end{minted}
 \end{frame}
 
@@ -240,9 +239,10 @@
   \begin{minted}[]{clj}
 (defn wrap-get
   [t & args]
-  (if (> (count (dtype/shape t)) (count args))
-    (apply tensor/select t (map mod args (dtype/shape t)))
-    (apply t (map mod args (dtype/shape t)))))
+  (let [indices (map mod args (dtype/shape t))]
+    (if (> (count indices) (count args))
+      (apply tensor/select t indices)
+      (apply t indices))))
   \end{minted}
 \end{frame}
 
@@ -638,20 +638,6 @@ perlin-norm
   \end{center}
 \end{frame}
 
-\begin{frame}[fragile]
-  \frametitle{Octaves}
-  \begin{minted}[]{clj}
-(defn octaves
-  [n decay]
-  (let [series (take n (iterate #(* % decay) 1.0))
-        sum    (apply + series)]
-    (mapv #(/ % sum) series)))
-
-(octaves 4 0.5)
-; [0.5333.. 0.2666.. 0.1333.. 0.0666..]
-  \end{minted}
-\end{frame}
-
 \begin{frame}
   \frametitle{OpenGL Superbible}
   \begin{center}
@@ -764,6 +750,122 @@ void main()
   \begin{minted}[]{clj}
 (render-pixel [vertex-passthrough] [fragment-test])
 ; [1.0, 1.0, 1.0, 1.0]
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Noise Mock}
+  \begin{minted}[]{clj}
+(def noise-mock
+"#version 130
+float noise(vec3 idx)
+{
+  ivec3 v = ivec3(floor(idx.x), floor(idx.y), floor(idx.z)) % 2;
+  return ((v.x == 1) == (v.y == 1)) == (v.z == 1) ? 1.0 : 0.0;
+}")
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Noise Mock Test Fragment Shader}
+  \begin{minted}[]{clj}
+(def noise-probe
+  (template/fn [x y z]
+"#version 130
+out vec4 fragColor;
+float noise(vec3 idx);
+void main()
+{
+  fragColor = vec4(noise(vec3(<%= x %>, <%= y %>, <%= z %>)));
+}"))
+  \end{minted}
+  \bigskip
+  Using \href{https://github.com/weavejester/comb}{Comb} templating library
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Noise Mock Unit Tests}
+  \begin{minted}[]{clj}
+(tabular "Test noise mock"
+         (fact (nth (render-pixel [vertex-passthrough]
+                                  [noise-mock (noise-probe ?x ?y ?z)]) 0)
+               => ?result)
+         ?x ?y ?z ?result
+         0  0  0  0.0
+         1  0  0  1.0
+         0  1  0  1.0
+         1  1  0  0.0
+         0  0  1  1.0
+         1  0  1  0.0
+         0  1  1  0.0
+         1  1  1  1.0)
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Octaves}
+  \begin{minted}[]{clj}
+(defn octaves
+  [n decay]
+  (let [series (take n (iterate #(* % decay) 1.0))
+        sum    (apply + series)]
+    (mapv #(/ % sum) series)))
+
+(octaves 4 0.5)
+; [0.5333.. 0.2666.. 0.1333.. 0.0666..]
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Octaves of Noise: Test Shader}
+  \begin{minted}[]{clj}
+(def octaves-probe
+  (template/fn [x y z]
+"#version 130
+out vec4 fragColor;
+float octaves(vec3 idx);
+void main()
+{
+  fragColor = vec4(octaves(vec3(<%= x %>, <%= y %>, <%= z %>)));
+}"))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Octaves of Noise: Tests}
+  \begin{minted}[]{clj}
+(tabular "Test octaves of noise"
+         (fact (first (render-pixel [vertex-passthrough]
+                                    [noise-mock (noise-octaves ?octaves)
+                                     (octaves-probe ?x ?y ?z)]))
+               => ?result)
+         ?x  ?y ?z ?octaves  ?result
+         0   0  0  [1.0]     0.0
+         1   0  0  [1.0]     1.0
+         1   0  0  [0.5]     0.5
+         0.5 0  0  [0.0 1.0] 1.0
+         0.5 0  0  [0.0 1.0] 1.0
+         1   0  0  [1.0 0.0] 1.0)
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Octaves of Noise: Implementation}
+  \begin{minted}[]{clj}
+(def noise-octaves
+  (template/fn [octaves]
+"#version 130
+out vec4 fragColor;
+float noise(vec3 idx);
+float octaves(vec3 idx)
+{
+  float result = 0.0;
+<% (doseq [multiplier octaves] %>
+  result += <%= multiplier %> * noise(idx);
+  idx *= 2.0;
+<%= ) %>
+  return result;
+}"))
   \end{minted}
 \end{frame}
 
