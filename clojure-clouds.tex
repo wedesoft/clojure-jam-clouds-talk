@@ -1180,7 +1180,7 @@ float noise(vec3 idx)
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Remapped Noise}
+  \frametitle{Octaves of Noise}
   \begin{minted}[]{clj}
 (rgba-array->bufimg
   (render-noise 640 480 constant-scatter no-shadow
@@ -1195,6 +1195,55 @@ float noise(vec3 idx)
   \frametitle{Octaves of Noise}
   \begin{center}
     \includegraphics[width=.65\textwidth]{octaves}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Mie Scattering}
+  \begin{minted}[]{clj}
+(def mie-scatter
+  (template/fn [g]
+"#version 450 core
+#define M_PI 3.1415926535897932384626433832795
+#define ANISOTROPIC 0.25
+#define G <%= g %>
+uniform vec3 light;
+float mie(float mu)
+{
+  return 3 * (1 - G * G) * (1 + mu * mu) /
+    (8 * M_PI * (2 + G * G) * pow(1 + G * G - 2 * G * mu, 1.5));
+}
+float in_scatter(vec3 point, vec3 direction)
+{
+  return mix(1.0, mie(dot(light, direction)), ANISOTROPIC);
+}"))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Mie Probe}
+  \begin{minted}[]{clj}
+(def mie-probe
+  (template/fn [mu]
+"#version 450 core
+out vec4 fragColor;
+float mie(float mu);
+void main()
+{
+  float result = mie(<%= mu %>);
+  fragColor = vec4(result, 0, 0, 1);
+}"))
+
+(defn scatter-amount [theta]
+  (first (render-pixel [vertex-passthrough]
+                       [(mie-scatter 0.76) (mie-probe (cos theta))])))
+  \end{minted}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Mie Scatter}
+  \begin{center}
+    \includegraphics[width=.6\textwidth]{mie-scatter}
   \end{center}
 \end{frame}
 
