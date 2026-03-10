@@ -1179,6 +1179,18 @@ float noise(vec3 idx)
   \end{center}
 \end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Remapped Noise}
+  \begin{minted}[]{clj}
+(rgba-array->bufimg
+  (render-noise 640 480 constant-scatter no-shadow
+                (cloud-transfer "remap_noise" 0.01)
+                remap-clamp (remap-noise "octaves" 0.45 0.9 cloud-strength)
+                (noise-octaves (octaves 4 0.5)) noise-shader)
+  640 480)
+  \end{minted}
+\end{frame}
+
 \begin{frame}
   \frametitle{Octaves of Noise}
   \begin{center}
