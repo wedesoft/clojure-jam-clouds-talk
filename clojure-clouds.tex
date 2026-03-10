@@ -1120,10 +1120,69 @@ float noise(vec3 idx)
   \end{minted}
 \end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Generic Scene Render Method}
+  \begin{minted}[]{clj}
+(defn render-noise
+  [width height & cloud-shaders]
+  (let [fragment-sources (concat cloud-shaders [ray-box fragment-cloud])
+        program          (make-program-with-shaders [vertex-passthrough] 
+                                                    fragment-sources)
+        vao              (setup-quad-vao)]
+    (try
+      (setup-point-attribute program)
+      (render-array width height
+                    (setup-noise-uniforms program width height)
+                    (GL11/glDrawElements GL11/GL_QUADS 4
+                                         GL11/GL_UNSIGNED_INT 0))
+      (finally
+        (teardown-vao vao)
+        (GL20/glDeleteProgram program)))))
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{3D Noise}
+  \begin{minted}[]{clj}
+(rgba-array->bufimg
+  (render-noise 640 480
+                constant-scatter no-shadow (cloud-transfer "noise" 0.01)
+                noise-shader)
+  640 480)
+  \end{minted}
+\end{frame}
+
 \begin{frame}
   \frametitle{3D Noise}
   \begin{center}
     \includegraphics[width=.65\textwidth]{noise}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Remapped Noise}
+  \begin{minted}[]{clj}
+(rgba-array->bufimg
+  (render-noise 640 480
+                constant-scatter no-shadow
+                (cloud-transfer "remap_noise" 0.01)
+                remap-clamp (remap-noise "noise" 0.45 0.9 cloud-strength)
+                noise-shader)
+  640 480)
+  \end{minted}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Remapped Noise}
+  \begin{center}
+    \includegraphics[width=.65\textwidth]{remap}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Octaves of Noise}
+  \begin{center}
+    \includegraphics[width=.65\textwidth]{octaves}
   \end{center}
 \end{frame}
 
